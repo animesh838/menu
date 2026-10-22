@@ -1,6 +1,9 @@
 # Local database — holds live orders, never commit it.
 db.sqlite3
 
+# collectstatic output, rebuilt on every deploy.
+staticfiles/
+
 # Python
 __pycache__/
 *.py[cod]

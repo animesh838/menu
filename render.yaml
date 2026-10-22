@@ -1,0 +1,20 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploy: Render dashboard -> New + -> Blueprint -> pick this repo.
+# Render reads this file, creates the service and wires up the settings below.
+services:
+  - type: web
+    name: qr-menu
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn config.wsgi:application
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "0"
+      # Render generates a strong secret at deploy time; it never enters the repo.
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # ALLOWED_HOSTS is filled in automatically from RENDER_EXTERNAL_HOSTNAME.
+      - key: PYTHON_VERSION
+        value: "3.13.1"
