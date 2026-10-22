@@ -1,7 +1,9 @@
 // ---------------------------------------------------------------------------
-// Kitchen board. Reads the orders the guest menu writes, and moves each order
-// through the flow: new -> preparing -> ready -> served.
+// Kitchen board. Polls the order API for the orders guests place from their
+// tables, and moves each one through new -> preparing -> ready -> served.
 // ---------------------------------------------------------------------------
+
+const POLL_MS = 3000;
 
 const FILTERS = [
   { label: "Active", statuses: ["new", "preparing", "ready"] },
@@ -19,6 +21,21 @@ const NEXT_STEP = {
 };
 
 let activeFilter = FILTERS[0].label;
+
+// Latest orders from the API, reused for tab switches between polls.
+let orders = [];
+// Re-render only when something actually changed, so scrolling stays put.
+let lastSignature = "";
+
+function showError(message) {
+  const note = document.getElementById("kitchenError");
+  note.textContent = message;
+  note.hidden = false;
+}
+
+function clearError() {
+  document.getElementById("kitchenError").hidden = true;
+}
 
 function timeAgo(isoDate) {
   const minutes = Math.floor((Date.now() - new Date(isoDate).getTime()) / 60000);
@@ -110,9 +127,18 @@ function createOrderCard(order) {
   button.type = "button";
   button.className = next ? "btn" : "btn btn--ghost";
   button.textContent = target.label;
-  button.addEventListener("click", () => {
-    setOrderStatus(order.id, target.status);
-    render();
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+
+    try {
+      await setOrderStatus(order.id, target.status);
+    } catch (error) {
+      button.disabled = false;
+      showError(`Couldn't update order #${order.number}: ${error.message}`);
+      return;
+    }
+
+    refresh();
   });
   actions.appendChild(button);
 
@@ -121,7 +147,6 @@ function createOrderCard(order) {
 }
 
 function render() {
-  const orders = readOrders();
   const newestFirst = [...orders].sort(
     (a, b) => new Date(b.placedAt) - new Date(a.placedAt)
   );
@@ -150,23 +175,50 @@ function render() {
   empty.hidden = visible.length > 0;
 }
 
+// Only touch the DOM when an order changed, or once a minute so the
+// "x min ago" labels stay honest.
+function renderIfChanged() {
+  const signature = [
+    ...orders.map((order) => `${order.id}:${order.status}:${order.updatedAt || ""}`),
+    activeFilter,
+    Math.floor(Date.now() / 60000)
+  ].join("|");
+
+  if (signature === lastSignature) return;
+  lastSignature = signature;
+  render();
+}
+
+async function refresh() {
+  try {
+    orders = await fetchOrders();
+  } catch (error) {
+    showError(`Can't reach the order server, retrying... (${error.message})`);
+    return;
+  }
+
+  clearError();
+  renderIfChanged();
+}
+
 function init() {
   document.getElementById("kitchenSub").textContent =
     `${RESTAURANT.name} · orders arrive live from the menu`;
 
   buildTabs();
-  render();
+  refresh();
 
-  document.getElementById("clearDoneButton").addEventListener("click", () => {
-    clearFinishedOrders();
-    render();
+  document.getElementById("clearDoneButton").addEventListener("click", async () => {
+    try {
+      await clearFinishedOrders();
+    } catch (error) {
+      // refresh() below surfaces any connection problem.
+    }
+    refresh();
   });
 
-  // A guest placed an order, or another screen changed one.
-  onOrdersChanged(render);
-
-  // Keep the "x min ago" labels fresh.
-  setInterval(render, 30000);
+  // Guests' orders show up here within a few seconds.
+  setInterval(refresh, POLL_MS);
 }
 
 init();

@@ -447,6 +447,18 @@ body { padding-bottom: 78px; }
   font-weight: 600;
 }
 
+/* Shown when the order API can't be reached */
+.form-error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #7f2c2c;
+  background: #2a1616;
+  color: #ff9b9b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* QR modal field sits above the code */
 .modal__card .field { text-align: left; margin-bottom: 14px; }
 

@@ -406,44 +406,56 @@ function openOrder() {
 function closeOrder() {
   document.getElementById("orderModal").hidden = true;
   document.getElementById("checkoutView").reset();
+  document.getElementById("checkoutError").hidden = true;
+  stopTrackedOrderPolling();
   applyTableFromQr();
 }
 
-function placeOrder(data) {
+async function placeOrder(data) {
   const items = [...cart].map(([id, qty]) => {
     const dish = DISHES_BY_ID.get(id);
     return { id, name: dish.name, price: dish.price, qty };
   });
 
-  const subtotal = cartSubtotal();
-  const service = subtotal * RESTAURANT.serviceChargeRate;
+  const errorNote = document.getElementById("checkoutError");
+  const submitButton = document.getElementById("submitOrderButton");
 
-  // The kitchen board picks this up through the shared order store.
-  const order = createOrder({
-    customer: data.get("name").trim(),
-    table: state.table || data.get("table").trim(),
-    phone: data.get("phone").trim(),
-    notes: data.get("notes").trim(),
-    items,
-    subtotal,
-    service,
-    total: subtotal + service
-  });
+  errorNote.hidden = true;
+  submitButton.disabled = true;
+  submitButton.textContent = "Placing order...";
 
-  state.lastOrderId = order.id;
+  try {
+    // The backend stores the order, so the kitchen board sees it from any device.
+    const order = await createOrder({
+      customer: data.get("name").trim(),
+      table: state.table || data.get("table").trim(),
+      phone: data.get("phone").trim(),
+      notes: data.get("notes").trim(),
+      items
+    });
 
-  cart.clear();
-  saveCart();
-  renderCartBar();
+    state.lastOrderId = order.id;
 
-  const itemCount = items.reduce((sum, line) => sum + line.qty, 0);
-  document.getElementById("orderNumber").textContent =
-    `Order #${order.number} · Table ${order.table}`;
-  document.getElementById("orderDetails").textContent =
-    `${itemCount} ${itemCount === 1 ? "item" : "items"} · ${money(order.total)} · We'll bring it to your table shortly.`;
+    cart.clear();
+    saveCart();
+    renderCartBar();
 
-  renderOrderStatus(order.status);
-  showOrderView("success");
+    document.getElementById("orderNumber").textContent =
+      `Order #${order.number} · Table ${order.table}`;
+    document.getElementById("orderDetails").textContent =
+      `${items.reduce((sum, line) => sum + line.qty, 0)} items · ${money(order.total)} · We'll bring it to your table shortly.`;
+
+    renderOrderStatus(order.status);
+    showOrderView("success");
+    startTrackedOrderPolling();
+  } catch (error) {
+    errorNote.textContent =
+      error.message || "We couldn't send your order. Please try again.";
+    errorNote.hidden = false;
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Place order";
+  }
 }
 
 // The kitchen moves the order along; the guest sees the change here.
@@ -454,10 +466,28 @@ function renderOrderStatus(status) {
   pill.hidden = false;
 }
 
-function refreshTrackedOrder() {
+const ORDER_POLL_MS = 3000;
+let orderPollTimer = null;
+
+function startTrackedOrderPolling() {
+  stopTrackedOrderPolling();
+  orderPollTimer = setInterval(refreshTrackedOrder, ORDER_POLL_MS);
+}
+
+function stopTrackedOrderPolling() {
+  if (orderPollTimer) clearInterval(orderPollTimer);
+  orderPollTimer = null;
+}
+
+async function refreshTrackedOrder() {
   if (!state.lastOrderId) return;
-  const order = readOrders().find((entry) => entry.id === state.lastOrderId);
-  if (order) renderOrderStatus(order.status);
+
+  try {
+    const order = await fetchOrder(state.lastOrderId);
+    renderOrderStatus(order.status);
+  } catch (error) {
+    // Keep showing the last known status if the kitchen update can't be fetched.
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -530,9 +560,6 @@ function init() {
   document.getElementById("orderModal").addEventListener("click", (event) => {
     if (event.target.id === "orderModal") closeOrder();
   });
-
-  // Live status updates pushed from the kitchen board.
-  onOrdersChanged(refreshTrackedOrder);
 
   // QR share
   document.getElementById("qrButton").addEventListener("click", openQrModal);

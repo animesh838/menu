@@ -1,0 +1,8 @@
+# Local database — holds live orders, never commit it.
+db.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

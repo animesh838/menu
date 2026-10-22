@@ -1,11 +1,12 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#12100e" />
   <title>Green Fork Bistro — Menu</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="{% static 'styles.css' %}" />
 </head>
 <body>
   <header class="hero">
@@ -36,7 +37,7 @@
 
   <footer class="footer">
     <p id="footerNote"></p>
-    <p><a class="footer__link" href="kitchen.html">Staff: open kitchen board</a></p>
+    <p><a class="footer__link" href="{% url 'kitchen' %}">Staff: open kitchen board</a></p>
   </footer>
 
   <!-- Sticky order bar -->
@@ -89,8 +90,9 @@
           <span>Notes (optional)</span>
           <textarea name="notes" rows="2" placeholder="Allergies, no onions..."></textarea>
         </label>
+        <p class="form-error" id="checkoutError" hidden></p>
         <div class="modal__actions">
-          <button class="btn" type="submit">Place order</button>
+          <button id="submitOrderButton" class="btn" type="submit">Place order</button>
           <button id="backToCartButton" class="btn btn--ghost" type="button">Back</button>
         </div>
       </form>
@@ -124,7 +126,7 @@
     </div>
   </div>
 
-  <script src="shared.js"></script>
-  <script src="script.js"></script>
+  <script src="{% static 'shared.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
 </body>
 </html>

@@ -1,12 +1,13 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#12100e" />
   <title>Kitchen</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="kitchen.css" />
+  <link rel="stylesheet" href="{% static 'styles.css' %}" />
+  <link rel="stylesheet" href="{% static 'kitchen.css' %}" />
 </head>
 <body class="kitchen">
   <header class="k-header">
@@ -33,11 +34,13 @@
       <button id="clearDoneButton" class="btn btn--ghost" type="button">Clear served</button>
     </div>
 
+    <p class="form-error" id="kitchenError" hidden></p>
+
     <section id="orderList" class="order-list" aria-live="polite"></section>
     <p id="noOrders" class="empty" hidden></p>
   </main>
 
-  <script src="shared.js"></script>
-  <script src="kitchen.js"></script>
+  <script src="{% static 'shared.js' %}"></script>
+  <script src="{% static 'kitchen.js' %}"></script>
 </body>
 </html>
