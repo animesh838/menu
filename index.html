@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#12100e" />
+  <title>Green Fork Bistro — Menu</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner">
+      <img class="hero__logo" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=minimal%20flat%20vector%20restaurant%20logo%2C%20green%20fork%20and%20leaf%20emblem%2C%20dark%20background%2C%20clean%20lines&image_size=square" alt="Green Fork Bistro logo" />
+      <div class="hero__text">
+        <h1 id="restaurantName">Green Fork Bistro</h1>
+        <p id="restaurantTagline">Fresh seasonal plates, made to order</p>
+        <p class="hero__meta" id="restaurantMeta"></p>
+      </div>
+    </div>
+    <div class="hero__actions">
+      <span id="tableBadge" class="table-badge" hidden></span>
+      <button id="qrButton" class="btn btn--ghost" type="button">Share / QR</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="toolbar">
+      <input id="searchInput" class="search" type="search" placeholder="Search dishes..." aria-label="Search dishes" />
+      <nav id="categoryNav" class="tabs" aria-label="Menu categories"></nav>
+    </div>
+
+    <section id="menu" class="menu" aria-live="polite"></section>
+
+    <p id="emptyState" class="empty" hidden>No dishes match your search.</p>
+  </main>
+
+  <footer class="footer">
+    <p id="footerNote"></p>
+    <p><a class="footer__link" href="kitchen.html">Staff: open kitchen board</a></p>
+  </footer>
+
+  <!-- Sticky order bar -->
+  <button id="cartBar" class="cart-bar" type="button" hidden>
+    <span class="cart-bar__count" id="cartBarCount">0 items</span>
+    <span class="cart-bar__total" id="cartBarTotal"></span>
+    <span class="cart-bar__cta">View order</span>
+  </button>
+
+  <!-- Order modal -->
+  <div id="orderModal" class="modal" hidden>
+    <div class="modal__card modal__card--wide" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
+      <h2 id="orderTitle">Your order</h2>
+
+      <div id="cartView">
+        <ul id="cartList" class="cart-list"></ul>
+        <p id="cartEmpty" class="empty" hidden>Your order is empty.</p>
+        <div class="totals">
+          <div class="totals__row">
+            <span>Subtotal</span><span id="subtotalValue"></span>
+          </div>
+          <div class="totals__row">
+            <span id="serviceLabel">Service</span><span id="serviceValue"></span>
+          </div>
+          <div class="totals__row totals__row--total">
+            <span>Total</span><span id="totalValue"></span>
+          </div>
+        </div>
+        <div class="modal__actions">
+          <button id="checkoutButton" class="btn" type="button">Checkout</button>
+          <button id="closeOrderButton" class="btn btn--ghost" type="button">Close</button>
+        </div>
+      </div>
+
+      <form id="checkoutView" class="form" hidden>
+        <label class="field">
+          <span>Name</span>
+          <input name="name" type="text" required autocomplete="name" />
+        </label>
+        <label class="field" id="tableField">
+          <span>Table number</span>
+          <input name="table" type="text" inputmode="numeric" required />
+        </label>
+        <p class="field-note" id="tableNote" hidden></p>
+        <label class="field">
+          <span>Phone (optional)</span>
+          <input name="phone" type="tel" autocomplete="tel" />
+        </label>
+        <label class="field">
+          <span>Notes (optional)</span>
+          <textarea name="notes" rows="2" placeholder="Allergies, no onions..."></textarea>
+        </label>
+        <div class="modal__actions">
+          <button class="btn" type="submit">Place order</button>
+          <button id="backToCartButton" class="btn btn--ghost" type="button">Back</button>
+        </div>
+      </form>
+
+      <div id="successView" hidden>
+        <p class="success__title">Order confirmed</p>
+        <p class="status-pill" id="orderStatus" hidden></p>
+        <p class="success__meta" id="orderNumber"></p>
+        <p class="success__meta" id="orderDetails"></p>
+        <div class="modal__actions">
+          <button id="newOrderButton" class="btn" type="button">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR modal -->
+  <div id="qrModal" class="modal" hidden>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+      <h2 id="qrTitle">Table QR code</h2>
+      <label class="field">
+        <span>Table number</span>
+        <input id="qrTableInput" type="text" inputmode="numeric" placeholder="e.g. 7" />
+      </label>
+      <img id="qrImage" class="modal__qr" alt="QR code linking to this menu" />
+      <p class="modal__url" id="qrUrl"></p>
+      <div class="modal__actions">
+        <button id="copyLinkButton" class="btn" type="button">Copy link</button>
+        <button id="closeModalButton" class="btn btn--ghost" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

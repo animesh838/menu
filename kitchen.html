@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#12100e" />
+  <title>Kitchen</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="kitchen.css" />
+</head>
+<body class="kitchen">
+  <header class="k-header">
+    <div>
+      <h1 class="k-header__title">Kitchen board</h1>
+      <p class="k-header__sub" id="kitchenSub"></p>
+    </div>
+    <div class="k-stats">
+      <div class="k-stat k-stat--new">
+        <strong id="statNew">0</strong><span>New</span>
+      </div>
+      <div class="k-stat k-stat--preparing">
+        <strong id="statPreparing">0</strong><span>Preparing</span>
+      </div>
+      <div class="k-stat k-stat--ready">
+        <strong id="statReady">0</strong><span>Ready</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="k-main">
+    <div class="k-toolbar">
+      <nav class="tabs" id="kitchenTabs" aria-label="Filter orders"></nav>
+      <button id="clearDoneButton" class="btn btn--ghost" type="button">Clear served</button>
+    </div>
+
+    <section id="orderList" class="order-list" aria-live="polite"></section>
+    <p id="noOrders" class="empty" hidden></p>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="kitchen.js"></script>
+</body>
+</html>
