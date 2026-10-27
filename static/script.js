@@ -120,8 +120,12 @@ const state = {
   query: "",
   // Table numbers come from the QR code link, e.g. ...?table=7
   table: new URLSearchParams(window.location.search).get("table") || "",
-  // The order this guest just placed, so its status can be tracked live.
-  lastOrderId: null
+  // Order ids this guest has placed, newest first (persisted in localStorage).
+  myOrderIds: [],
+  // Those same orders as the API returned them, so statuses can be shown live.
+  myOrders: [],
+  // Which of them the guest is currently looking at.
+  currentOrderId: null
 };
 
 // Give every dish a stable id so it can be tracked in the cart.
@@ -389,12 +393,19 @@ function renderCart() {
   document.getElementById("checkoutButton").disabled = cart.size === 0;
 }
 
+const ORDER_VIEW_TITLES = {
+  cart: "Your order",
+  checkout: "Your order",
+  orders: "My orders",
+  success: "Your order"
+};
+
 function showOrderView(view) {
   document.getElementById("cartView").hidden = view !== "cart";
   document.getElementById("checkoutView").hidden = view !== "checkout";
+  document.getElementById("ordersView").hidden = view !== "orders";
   document.getElementById("successView").hidden = view !== "success";
-  document.getElementById("orderTitle").textContent =
-    view === "success" ? "Order confirmed" : "Your order";
+  document.getElementById("orderTitle").textContent = ORDER_VIEW_TITLES[view];
 }
 
 function openOrder() {
@@ -407,7 +418,7 @@ function closeOrder() {
   document.getElementById("orderModal").hidden = true;
   document.getElementById("checkoutView").reset();
   document.getElementById("checkoutError").hidden = true;
-  stopTrackedOrderPolling();
+  stopMyOrdersPolling();
   applyTableFromQr();
 }
 
@@ -434,17 +445,19 @@ async function placeOrder(data) {
       items
     });
 
-    // Remember the order so the guest can reopen it after a refresh.
-    saveTrackedOrder(order.id);
+    // Remember the order so "My orders" still lists it after a refresh.
+    rememberOrder(order.id);
+    state.currentOrderId = order.id;
+    state.myOrders = [order, ...state.myOrders.filter((known) => known.id !== order.id)];
 
     cart.clear();
     saveCart();
     renderCartBar();
 
-    document.getElementById("orderTitle").textContent = "Order confirmed";
-    renderTrackedOrder(order);
+    renderOrderDetail(order);
     showOrderView("success");
-    startTrackedOrderPolling();
+    document.getElementById("orderTitle").textContent = "Order confirmed";
+    startMyOrdersPolling();
   } catch (error) {
     errorNote.textContent =
       error.message || "We couldn't send your order. Please try again.";
@@ -458,13 +471,14 @@ async function placeOrder(data) {
 // ---------------------------------------------------------------------------
 // Live order tracking
 //
-// The order id is stored in localStorage, not just in memory, so a guest can
-// close the page, come back, and still watch their order move through the
-// kitchen. The status itself always comes from the server, which is what the
-// kitchen board writes to — so the two views can never drift apart.
+// Every order this guest places is remembered by id in localStorage, so the
+// "My orders" tab is always usable — including after a refresh or a later
+// visit. Statuses always come from the server the kitchen writes to, and are
+// refreshed with a single list call rather than one request per order.
 // ---------------------------------------------------------------------------
-const ORDER_POLL_MS = 3000;
-const TRACKED_ORDER_KEY = "greenfork.trackedOrder";
+const MY_ORDERS_POLL_MS = 3000;
+const MY_ORDERS_KEY = "greenfork.myOrders";
+const MY_ORDERS_LIMIT = 20;
 
 // The stages the kitchen moves an order through, in order.
 const ORDER_STEPS = [
@@ -474,31 +488,26 @@ const ORDER_STEPS = [
   { status: "done", label: "Served" }
 ];
 
-let orderPollTimer = null;
+let myOrdersPollTimer = null;
 
-function loadTrackedOrder() {
+function loadMyOrders() {
   try {
-    return JSON.parse(localStorage.getItem(TRACKED_ORDER_KEY) || "null");
+    const saved = JSON.parse(localStorage.getItem(MY_ORDERS_KEY) || "[]");
+    return Array.isArray(saved) ? saved.filter((id) => Number.isInteger(id)) : [];
   } catch (error) {
-    return null;
+    return [];
   }
 }
 
-function saveTrackedOrder(id) {
-  state.lastOrderId = id;
-  localStorage.setItem(TRACKED_ORDER_KEY, JSON.stringify(id));
-  renderTrackButton();
+function saveMyOrders() {
+  localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(state.myOrderIds));
 }
 
-function clearTrackedOrder() {
-  state.lastOrderId = null;
-  localStorage.removeItem(TRACKED_ORDER_KEY);
-  renderTrackButton();
-}
-
-// Only offer the entry point when there is actually an order to show.
-function renderTrackButton() {
-  document.getElementById("trackOrderButton").hidden = !state.lastOrderId;
+// Newest first, and never store the same order twice.
+function rememberOrder(id) {
+  state.myOrderIds = [id, ...state.myOrderIds.filter((known) => known !== id)]
+    .slice(0, MY_ORDERS_LIMIT);
+  saveMyOrders();
 }
 
 // The kitchen moves the order along; the guest sees the change here.
@@ -567,7 +576,7 @@ function renderOrderItems(order) {
   document.getElementById("orderTotals").hidden = false;
 }
 
-function renderTrackedOrder(order) {
+function renderOrderDetail(order) {
   const served = order.status === "done";
 
   document.getElementById("successTitle").textContent =
@@ -583,48 +592,149 @@ function renderTrackedOrder(order) {
   renderOrderItems(order);
 }
 
-// Reopening from the saved id, for a guest who came back later.
-async function openTrackedOrder() {
-  if (!state.lastOrderId) return;
+function timeAgo(isoDate) {
+  const minutes = Math.floor((Date.now() - new Date(isoDate).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes === 1) return "1 min ago";
+  return `${minutes} min ago`;
+}
 
-  showOrderView("success");
-  // showOrderView resets the heading, so set ours after it.
-  document.getElementById("orderTitle").textContent = "Your order";
+function createOrderRow(order) {
+  const row = document.createElement("li");
+  row.className = "order-row";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "order-row__button";
+  button.addEventListener("click", () => openOrderDetail(order.id));
+
+  const head = document.createElement("div");
+  head.className = "order-row__head";
+
+  const number = document.createElement("span");
+  number.className = "order-row__number";
+  number.textContent = `#${order.number}`;
+
+  const pill = document.createElement("span");
+  pill.className = `status-pill status-pill--${order.status}`;
+  pill.textContent = STATUS_LABELS[order.status] || order.status;
+
+  head.append(number, pill);
+
+  const count = order.items.reduce((sum, line) => sum + line.qty, 0);
+  const meta = document.createElement("p");
+  meta.className = "order-row__meta";
+  meta.textContent =
+    `${order.table ? `Table ${order.table} · ` : ""}` +
+    `${count} ${count === 1 ? "item" : "items"} · ${money(order.total)}`;
+
+  const when = document.createElement("p");
+  when.className = "order-row__time";
+  when.textContent = timeAgo(order.placedAt);
+
+  button.append(head, meta, when);
+  row.appendChild(button);
+  return row;
+}
+
+function renderOrdersList() {
+  const list = document.getElementById("ordersList");
+  const empty = document.getElementById("ordersEmpty");
+  list.innerHTML = "";
+
+  state.myOrders.forEach((order) => list.appendChild(createOrderRow(order)));
+
+  if (state.myOrders.length > 0) {
+    empty.hidden = true;
+    return;
+  }
+
+  empty.textContent = state.myOrderIds.length === 0
+    ? "You haven't placed an order yet."
+    : "Loading your orders...";
+  empty.hidden = false;
+}
+
+// The "My orders" tab: a list of everything this guest has ordered.
+async function openMyOrders() {
+  showOrderView("orders");
   document.getElementById("orderModal").hidden = false;
 
-  const order = await refreshTrackedOrder();
-  // Nothing to watch if it was already served (or already gone).
-  if (order && order.status !== "done") startTrackedOrderPolling();
+  if (state.myOrderIds.length === 0) {
+    state.myOrders = [];
+    renderOrdersList();
+    return;
+  }
+
+  // Show what we already have, then refresh it from the server.
+  renderOrdersList();
+  const orders = await refreshMyOrders();
+  if (orders && orders.some((order) => order.status !== "done")) {
+    startMyOrdersPolling();
+  }
 }
 
-function startTrackedOrderPolling() {
-  stopTrackedOrderPolling();
-  orderPollTimer = setInterval(refreshTrackedOrder, ORDER_POLL_MS);
+function openOrderDetail(id) {
+  const order = state.myOrders.find((known) => known.id === id);
+  if (!order) return;
+
+  state.currentOrderId = id;
+  showOrderView("success");
+  renderOrderDetail(order);
+
+  if (state.myOrders.some((known) => known.status !== "done")) {
+    startMyOrdersPolling();
+  }
 }
 
-function stopTrackedOrderPolling() {
-  if (orderPollTimer) clearInterval(orderPollTimer);
-  orderPollTimer = null;
+function startMyOrdersPolling() {
+  stopMyOrdersPolling();
+  myOrdersPollTimer = setInterval(refreshMyOrders, MY_ORDERS_POLL_MS);
 }
 
-async function refreshTrackedOrder() {
-  if (!state.lastOrderId) return null;
+function stopMyOrdersPolling() {
+  if (myOrdersPollTimer) clearInterval(myOrdersPollTimer);
+  myOrdersPollTimer = null;
+}
 
+// One list request refreshes every order on screen, and orders the kitchen has
+// cleared simply drop out of the history.
+async function refreshMyOrders() {
+  if (state.myOrderIds.length === 0) {
+    state.myOrders = [];
+    return [];
+  }
+
+  let all;
   try {
-    const order = await fetchOrder(state.lastOrderId);
-    renderTrackedOrder(order);
-    // Once served there is nothing left to watch, so stop hammering the API.
-    if (order.status === "done") stopTrackedOrderPolling();
-    return order;
+    all = await fetchOrders();
   } catch (error) {
-    // The order was cleared from the kitchen board — forget it.
-    if (error.status === 404) {
-      stopTrackedOrderPolling();
-      clearTrackedOrder();
-    }
-    // Any other failure just keeps the last known status on screen.
+    // Keep the last known statuses rather than blanking the list.
     return null;
   }
+
+  const present = new Set(all.map((order) => order.id));
+  const kept = state.myOrderIds.filter((id) => present.has(id));
+  if (kept.length !== state.myOrderIds.length) {
+    state.myOrderIds = kept;
+    saveMyOrders();
+    if (!kept.includes(state.currentOrderId)) state.currentOrderId = null;
+  }
+
+  const byId = new Map(all.map((order) => [order.id, order]));
+  state.myOrders = kept.map((id) => byId.get(id));
+
+  renderOrdersList();
+
+  const current = state.myOrders.find((order) => order.id === state.currentOrderId);
+  if (current) renderOrderDetail(current);
+
+  // Nothing is still moving, so there is nothing left to poll for.
+  if (!state.myOrders.some((order) => order.status !== "done")) {
+    stopMyOrdersPolling();
+  }
+
+  return state.myOrders;
 }
 
 // ---------------------------------------------------------------------------
@@ -669,9 +779,10 @@ function init() {
   buildTabs();
   loadCart();
 
-  // Restore the guest's last order, if they placed one on this device.
-  state.lastOrderId = loadTrackedOrder();
-  renderTrackButton();
+  // Restore the orders this guest placed on this device, if any.
+  state.myOrderIds = loadMyOrders();
+  state.myOrders = [];
+  state.currentOrderId = null;
 
   applyTableFromQr();
   renderMenu();
@@ -700,7 +811,9 @@ function init() {
     placeOrder(new FormData(event.currentTarget));
   });
   document.getElementById("newOrderButton").addEventListener("click", closeOrder);
-  document.getElementById("trackOrderButton").addEventListener("click", openTrackedOrder);
+  document.getElementById("trackOrderButton").addEventListener("click", openMyOrders);
+  document.getElementById("closeOrdersButton").addEventListener("click", closeOrder);
+  document.getElementById("backToOrdersButton").addEventListener("click", openMyOrders);
   document.getElementById("orderModal").addEventListener("click", (event) => {
     if (event.target.id === "orderModal") closeOrder();
   });

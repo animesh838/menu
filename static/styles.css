@@ -491,6 +491,56 @@ body { padding-bottom: 78px; }
 /* Header buttons sit together on the right */
 .hero__buttons { display: flex; gap: 8px; flex: 0 0 auto; }
 
+/* The guest's order history, one row per order */
+.orders-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.order-row__button {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.order-row__button:hover { border-color: var(--accent); }
+
+.order-row__button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.order-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.order-row__number { font-weight: 700; font-size: 0.95rem; }
+
+.order-row__head .status-pill { margin: 0; }
+
+.order-row__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.order-row__time {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
 /* Live progress through the kitchen, on the guest's order */
 .steps {
   list-style: none;

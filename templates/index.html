@@ -21,7 +21,7 @@
     <div class="hero__actions">
       <span id="tableBadge" class="table-badge" hidden></span>
       <div class="hero__buttons">
-        <button id="trackOrderButton" class="btn btn--ghost" type="button" hidden>My order</button>
+        <button id="trackOrderButton" class="btn btn--ghost" type="button">My orders</button>
         <button id="qrButton" class="btn btn--ghost" type="button">Share / QR</button>
       </div>
     </div>
@@ -100,6 +100,14 @@
         </div>
       </form>
 
+      <div id="ordersView" hidden>
+        <ul id="ordersList" class="orders-list"></ul>
+        <p id="ordersEmpty" class="empty" hidden></p>
+        <div class="modal__actions">
+          <button id="closeOrdersButton" class="btn btn--ghost" type="button">Close</button>
+        </div>
+      </div>
+
       <div id="successView" hidden>
         <p class="success__title" id="successTitle">Order confirmed</p>
         <p class="status-pill" id="orderStatus" hidden></p>
@@ -120,6 +128,7 @@
         <p class="success__meta" id="orderDetails"></p>
         <div class="modal__actions">
           <button id="newOrderButton" class="btn" type="button">Done</button>
+          <button id="backToOrdersButton" class="btn btn--ghost" type="button">All my orders</button>
         </div>
       </div>
     </div>
