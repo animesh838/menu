@@ -20,6 +20,13 @@ const NEXT_STEP = {
   ready: { label: "Mark served", status: "done" }
 };
 
+// And how to undo a tap that was made too early. A served order goes back to
+// the kitchen rather than to "ready", because that is what reopening means.
+const PREV_STEP = {
+  preparing: { label: "Back to new", status: "new" },
+  ready: { label: "Back to preparing", status: "preparing" }
+};
+
 let activeFilter = FILTERS[0].label;
 
 // Latest orders from the API, reused for tab switches between polls.
@@ -60,6 +67,28 @@ function buildTabs() {
     });
     nav.appendChild(button);
   });
+}
+
+// Moves an order to another status, then refreshes so the board catches up.
+function createActionButton(order, target, ghost) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = ghost ? "btn btn--ghost" : "btn";
+  button.textContent = target.label;
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+
+    try {
+      await setOrderStatus(order.id, target.status);
+    } catch (error) {
+      button.disabled = false;
+      showError(`Couldn't update order #${order.number}: ${error.message}`);
+      return;
+    }
+
+    refresh();
+  });
+  return button;
 }
 
 function createOrderCard(order) {
@@ -121,26 +150,16 @@ function createOrderCard(order) {
   actions.className = "order__actions";
 
   const next = NEXT_STEP[order.status];
-  const target = next || { label: "Reopen", status: "preparing" };
+  const prev = PREV_STEP[order.status];
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = next ? "btn" : "btn btn--ghost";
-  button.textContent = target.label;
-  button.addEventListener("click", async () => {
-    button.disabled = true;
+  // Forward: start preparing -> mark ready -> mark served. A served order can
+  // still be reopened if it turns out it needs doing again.
+  actions.appendChild(
+    createActionButton(order, next || { label: "Reopen", status: "preparing" }, !next)
+  );
 
-    try {
-      await setOrderStatus(order.id, target.status);
-    } catch (error) {
-      button.disabled = false;
-      showError(`Couldn't update order #${order.number}: ${error.message}`);
-      return;
-    }
-
-    refresh();
-  });
-  actions.appendChild(button);
+  // Back: undo a mistaken tap without having to serve the order first.
+  if (prev) actions.appendChild(createActionButton(order, prev, true));
 
   card.appendChild(actions);
   return card;
