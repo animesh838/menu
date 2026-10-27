@@ -183,7 +183,12 @@ body {
   flex: 0 0 auto;
 }
 
-.card__body { min-width: 0; display: flex; flex-direction: column; }
+.card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 .card__head {
   display: flex;
@@ -310,17 +315,30 @@ body {
 
 /* Add-to-order button on cards */
 .card__foot {
+  margin-top: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding-top: 8px;
 }
 
 .btn--add {
-  padding: 6px 12px;
-  font-size: 0.78rem;
+  padding: 6px 14px;
+  font-size: 0.8rem;
   border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  font-weight: 700;
   flex: 0 0 auto;
+  transition: all 0.2s ease;
+}
+
+.btn--add:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* Inline quantity stepper on a dish card, shown once the dish is in the order */
