@@ -199,27 +199,62 @@ function createCard(item) {
     badges.appendChild(span);
   });
 
-  const addButton = document.createElement("button");
-  addButton.type = "button";
-  addButton.className = "btn btn--add";
-  addButton.textContent = "Add";
-  addButton.addEventListener("click", () => {
-    addToCart(item.id);
-    addButton.textContent = "Added";
-    addButton.disabled = true;
-    setTimeout(() => {
-      addButton.textContent = "Add";
-      addButton.disabled = false;
-    }, 900);
-  });
-
   const foot = document.createElement("div");
   foot.className = "card__foot";
-  foot.append(badges, addButton);
+  foot.append(badges, createQuantityControl(item));
 
   body.append(head, desc, foot);
   card.append(img, body);
   return card;
+}
+
+// dish id -> the function that redraws that card's quantity control
+const cardControls = new Map();
+
+// Shows "Add" until the dish is in the order, then a − / count / + stepper, so
+// the guest can see how many they have added without opening the order sheet.
+function createQuantityControl(item) {
+  const control = document.createElement("div");
+  control.className = "qty";
+
+  function update() {
+    const qty = cart.get(item.id) || 0;
+    control.innerHTML = "";
+
+    if (qty === 0) {
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "btn btn--add";
+      add.textContent = "Add";
+      add.addEventListener("click", () => addToCart(item.id));
+      control.appendChild(add);
+      return;
+    }
+
+    const minus = document.createElement("button");
+    minus.type = "button";
+    minus.className = "qty__btn";
+    minus.textContent = "−";
+    minus.setAttribute("aria-label", `Remove one ${item.name}`);
+    minus.addEventListener("click", () => setQuantity(item.id, qty - 1));
+
+    const count = document.createElement("span");
+    count.className = "qty__count";
+    count.textContent = qty;
+
+    const plus = document.createElement("button");
+    plus.type = "button";
+    plus.className = "qty__btn";
+    plus.textContent = "+";
+    plus.setAttribute("aria-label", `Add another ${item.name}`);
+    plus.addEventListener("click", () => addToCart(item.id));
+
+    control.append(minus, count, plus);
+  }
+
+  update();
+  cardControls.set(item.id, update);
+  return control;
 }
 
 function matches(item) {
@@ -232,6 +267,8 @@ function renderMenu() {
   const container = document.getElementById("menu");
   const emptyState = document.getElementById("emptyState");
   container.innerHTML = "";
+  // The cards are rebuilt below, so their updaters are stale.
+  cardControls.clear();
 
   let visibleCount = 0;
 
@@ -315,10 +352,17 @@ function applyTableFromQr() {
   badge.hidden = false;
 }
 
+// Redraws every card's quantity control, so the menu stays in step with the
+// order however the quantity was changed.
+function renderCardControls() {
+  cardControls.forEach((update) => update());
+}
+
 function addToCart(id, qty = 1) {
   cart.set(id, (cart.get(id) || 0) + qty);
   saveCart();
   renderCartBar();
+  renderCardControls();
 }
 
 function setQuantity(id, qty) {
@@ -327,6 +371,7 @@ function setQuantity(id, qty) {
   saveCart();
   renderCartBar();
   renderCart();
+  renderCardControls();
 }
 
 function renderCartBar() {
@@ -453,6 +498,8 @@ async function placeOrder(data) {
     cart.clear();
     saveCart();
     renderCartBar();
+    // The cards should fall back to "Add" once the order is placed.
+    renderCardControls();
 
     renderOrderDetail(order);
     showOrderView("success");

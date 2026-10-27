@@ -323,6 +323,41 @@ body {
   flex: 0 0 auto;
 }
 
+/* Inline quantity stepper on a dish card, shown once the dish is in the order */
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.qty__btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qty__btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.qty__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.qty__count {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Sticky order bar */
 .cart-bar {
   position: fixed;
