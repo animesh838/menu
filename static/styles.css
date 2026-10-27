@@ -488,5 +488,82 @@ body { padding-bottom: 78px; }
 .status-pill--ready { color: #60a5fa; border-color: #2a4a6b; background: rgba(96, 165, 250, 0.12); }
 .status-pill--done { color: var(--muted); }
 
+/* Header buttons sit together on the right */
+.hero__buttons { display: flex; gap: 8px; flex: 0 0 auto; }
+
+/* Live progress through the kitchen, on the guest's order */
+.steps {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  text-align: left;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.step:last-child { padding-bottom: 0; }
+
+/* Line joining the dots, drawn from each dot down to the next */
+.step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.step__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  flex: 0 0 auto;
+}
+
+.step.is-done .step__dot { background: var(--accent); border-color: var(--accent); }
+
+.step.is-current { color: var(--text); font-weight: 700; }
+
+.step.is-current .step__dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.18);
+}
+
+/* Itemised list of what the guest ordered */
+.receipt {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.84rem;
+}
+
+.receipt__row { display: flex; align-items: baseline; gap: 8px; }
+
+.receipt__qty { color: var(--accent); font-weight: 700; flex: 0 0 auto; }
+
+.receipt__name { flex: 1; min-width: 0; }
+
+.receipt__price {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
 .footer__link { color: var(--accent); text-decoration: none; font-weight: 600; }
 .footer__link:hover { text-decoration: underline; }

@@ -48,7 +48,10 @@ async function apiFetch(path, options = {}) {
 
   if (!response.ok) {
     const message = (payload && payload.error) || `Request failed (${response.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    // Callers check this to tell "order deleted" (404) from a network blip.
+    error.status = response.status;
+    throw error;
   }
 
   return payload;
